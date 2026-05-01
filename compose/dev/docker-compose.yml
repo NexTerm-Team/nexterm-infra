@@ -1,0 +1,40 @@
+# Локальная разработка экосистемы.
+# Запуск: cd compose/dev && docker compose up
+#
+# Подразумевает, что репозитории всех компонентов лежат рядом,
+# в ../../../<repo>/ (см. структуру в Projects/nexterm/preferences.md).
+
+services:
+  web:
+    build:
+      context: ../../../nexterm-web
+      dockerfile: Dockerfile
+    container_name: nexterm-web-dev
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  # api: добавится при появлении nexterm-api
+  # api:
+  #   build:
+  #     context: ../../../nexterm-api
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     DATABASE_URL: postgres://nexterm:nexterm@db:5432/nexterm
+  #   depends_on:
+  #     - db
+
+  # db:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: nexterm
+  #     POSTGRES_PASSWORD: nexterm
+  #     POSTGRES_DB: nexterm
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   pgdata:

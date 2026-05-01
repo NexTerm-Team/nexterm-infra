@@ -1,0 +1,39 @@
+# Helm values для ingress-nginx.
+# Применяется: helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx -f values.yaml
+#
+# Yandex Cloud LoadBalancer Service создаст публичный NLB (network load balancer).
+
+controller:
+  # Один replica на старте — autoscaling добавим когда трафик пойдёт.
+  replicaCount: 1
+
+  service:
+    type: LoadBalancer
+    annotations:
+      # Тип балансировщика YC — external (публичный)
+      yandex.cloud/load-balancer-type: external
+      # Sticky sessions не нужны для лендинга
+    externalTrafficPolicy: Local
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Метрики для будущего Prometheus
+  metrics:
+    enabled: true
+
+  # Безопасные дефолты
+  config:
+    use-forwarded-headers: "true"
+    enable-real-ip: "true"
+    proxy-real-ip-cidr: "0.0.0.0/0" # YC LB-IP, можно сузить
+    server-tokens: "false"
+
+  # Admission webhook включён — валидация ingress-манифестов на стороне k8s.
+  admissionWebhooks:
+    enabled: true

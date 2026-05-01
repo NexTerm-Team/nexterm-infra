@@ -1,0 +1,32 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+crash.log
+crash.*.log
+
+# Sensitive variables — НЕ коммитить
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Local plan files
+tfplan
+*.tfplan
+
+# k8s
+kubeconfig
+*.kubeconfig
+
+# Helm
+charts/*.tgz
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

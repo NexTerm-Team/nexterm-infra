@@ -1,0 +1,30 @@
+# Helm values для cert-manager.
+# CRDs ставятся через --set installCRDs=true в helm-команде (см. README).
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 128Mi
+
+# Webhook и cainjector тоже нужно ограничить
+webhook:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+cainjector:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+# prometheus метрики на будущее
+prometheus:
+  enabled: false # включим когда будет Prometheus

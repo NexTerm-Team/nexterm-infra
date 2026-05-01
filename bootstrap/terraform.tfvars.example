@@ -1,0 +1,10 @@
+# Скопируйте в terraform.tfvars (gitignored) и заполните.
+
+cloud_id  = "b1g0umci2plkmko4jak2"
+folder_id = "b1g9ht2s34tuseng2rl4"
+zone      = "ru-central1-a"
+
+# По умолчанию имена ОК, кастомизация только если bucket name занят
+# state_bucket_name = "nexterm-tf-state"
+# ydb_database_name = "nexterm-tf-locks"
+# tf_sa_name        = "nexterm-tf"
