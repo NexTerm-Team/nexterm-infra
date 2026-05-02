@@ -43,14 +43,10 @@ resource "yandex_storage_bucket" "tf_state" {
     enabled = true
   }
 
-  # Шифрование at-rest через managed key YC.
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
+  # Note: YC Object Storage и так шифрует данные at-rest by default.
+  # Envelope encryption через KMS требует отдельный yandex_kms_symmetric_key —
+  # для bootstrap-state с одним SA это избыточно. Если понадобится —
+  # добавим в основной Terraform для prod-bucket'ов с критичными данными.
 
   # Lifecycle: храним noncurrent versions 90 дней, потом чистим.
   lifecycle_rule {
