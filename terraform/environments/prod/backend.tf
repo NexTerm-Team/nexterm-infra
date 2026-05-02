@@ -9,15 +9,16 @@
 terraform {
   backend "s3" {
     endpoints = {
-      s3       = "https://storage.yandexcloud.net"
-      dynamodb = "https://docapi.serverless.yandexcloud.net/ru-central1/b1g0umci2plkmko4jak2/etnpsuqpl8h6quof9oc6"
+      s3 = "https://storage.yandexcloud.net"
     }
 
     bucket = "nexterm-tf-state"
     region = "ru-central1"
     key    = "prod/terraform.tfstate"
 
-    dynamodb_table = "tf-locks"
+    # S3-native блокировки (через дополнительный *.tflock-файл в bucket).
+    # Заменяет deprecated dynamodb_table — не требует YDB.
+    use_lockfile = true
 
     skip_region_validation      = true
     skip_credentials_validation = true
