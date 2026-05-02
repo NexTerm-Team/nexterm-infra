@@ -1,0 +1,45 @@
+# ClusterIssuer для Let's Encrypt.
+# Применить ПОСЛЕ установки cert-manager и делегирования NS на YC.
+#
+# Использование в Ingress:
+#   metadata:
+#     annotations:
+#       cert-manager.io/cluster-issuer: letsencrypt-prod
+#   spec:
+#     tls:
+#       - hosts: [nexterm.ru]
+#         secretName: nexterm-tls
+
+# STAGING — для отладки (не упирается в rate-limits LE).
+# Сертификаты невалидны для браузеров, но процесс выпуска отладить можно.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    # При первом запуске будет создан Secret с приватным ключом аккаунта LE.
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    email: hello@nexterm.app
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: nginx
+---
+# PROD — настоящие сертификаты. Использовать только когда staging работает.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    email: hello@nexterm.app
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: nginx

@@ -1,0 +1,78 @@
+name: Terraform
+
+on:
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+
+permissions:
+  contents: read
+  id-token: write    # для OIDC
+  pull-requests: write
+
+jobs:
+  terraform:
+    name: prod
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/environments/prod
+
+    env:
+      # Backend (S3-совместимый Object Storage YC) — credentials в env
+      AWS_ACCESS_KEY_ID:     ${{ secrets.YC_TF_BACKEND_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TF_BACKEND_SECRET_KEY }}
+      # Provider — exchange OIDC → YC IAM
+      YC_TOKEN: ${{ steps.yc-auth.outputs.token }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Получаем GitHub OIDC-токен и обмениваем на YC IAM-токен через WIF.
+      - name: Authenticate to Yandex Cloud (WIF)
+        id: yc-auth
+        uses: yc-actions/yc-iam-token-fed-credential@v1
+        with:
+          federated-credential-id: ${{ secrets.YC_FEDERATED_CREDENTIAL_ID }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+
+      - run: terraform init
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive ../..
+
+      - name: terraform validate
+        run: terraform validate
+
+      - name: terraform plan
+        id: plan
+        run: terraform plan -no-color -out=tfplan
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PLAN: "${{ steps.plan.outputs.stdout }}"
+        with:
+          script: |
+            const plan = process.env.PLAN || '(нет изменений или ошибка)';
+            const body = `### Terraform Plan (prod)\n\n\`\`\`\n${plan.slice(0, 60000)}\n\`\`\``;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+
+      - name: terraform apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan

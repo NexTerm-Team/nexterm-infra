@@ -1,0 +1,108 @@
+# Reusable workflow для деплоя приложения через Helm-чарт из nexterm-infra.
+# Вызывается из компонентных репо (nexterm-web, nexterm-api, ...).
+#
+# Пример использования в репо компонента (.github/workflows/deploy.yml):
+#
+#   jobs:
+#     deploy:
+#       uses: NexTerm-Team/nexterm-infra/.github/workflows/reusable-k8s-deploy.yml@main
+#       with:
+#         component: web
+#         image: cr.yandex/<id>/web
+#         tag: ${{ github.sha }}
+#       secrets:
+#         YC_FEDERATED_CREDENTIAL_ID: ${{ secrets.YC_FEDERATED_CREDENTIAL_ID }}
+#         YC_CLUSTER_ID: ${{ secrets.YC_CLUSTER_ID }}
+
+name: Reusable k8s deploy
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: 'Имя компонента, должна совпадать с именем папки k8s/apps/<component>/'
+        required: true
+        type: string
+      image:
+        description: 'Полный путь до образа без тега (например cr.yandex/<id>/web)'
+        required: true
+        type: string
+      tag:
+        description: 'Тег образа (обычно SHA коммита)'
+        required: true
+        type: string
+      namespace:
+        description: 'k8s namespace. По умолчанию совпадает с component.'
+        required: false
+        type: string
+        default: ''
+      release_name:
+        description: 'Helm release name. По умолчанию совпадает с component.'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      YC_FEDERATED_CREDENTIAL_ID:
+        required: true
+      YC_CLUSTER_ID:
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout nexterm-infra
+        uses: actions/checkout@v4
+        with:
+          repository: NexTerm-Team/nexterm-infra
+          ref: main
+          path: infra
+
+      - name: Authenticate to Yandex Cloud (WIF)
+        id: yc-auth
+        uses: yc-actions/yc-iam-token-fed-credential@v1
+        with:
+          federated-credential-id: ${{ secrets.YC_FEDERATED_CREDENTIAL_ID }}
+
+      - name: Install yc CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i $HOME/yc -n
+          echo "$HOME/yc/bin" >> $GITHUB_PATH
+
+      - name: Get kubeconfig
+        env:
+          YC_TOKEN: ${{ steps.yc-auth.outputs.token }}
+        run: |
+          yc managed-kubernetes cluster get-credentials \
+            --id "${{ secrets.YC_CLUSTER_ID }}" \
+            --external --force
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.15.0
+
+      - name: Helm upgrade
+        run: |
+          NS="${{ inputs.namespace }}"
+          [ -z "$NS" ] && NS="${{ inputs.component }}"
+          REL="${{ inputs.release_name }}"
+          [ -z "$REL" ] && REL="${{ inputs.component }}"
+
+          helm upgrade --install "$REL" \
+            "infra/k8s/apps/${{ inputs.component }}" \
+            --namespace "$NS" --create-namespace \
+            --set image.repository="${{ inputs.image }}" \
+            --set image.tag="${{ inputs.tag }}" \
+            --wait --timeout 5m
+
+      - name: Verify rollout
+        run: |
+          NS="${{ inputs.namespace }}"
+          [ -z "$NS" ] && NS="${{ inputs.component }}"
+          kubectl -n "$NS" rollout status \
+            deployment/${{ inputs.component }}-${{ inputs.component }} \
+            --timeout 3m

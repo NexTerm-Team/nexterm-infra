@@ -1,0 +1,60 @@
+replicaCount: 2
+
+image:
+  # Подставится при `helm upgrade --set image.repository=...`
+  # Полный путь: cr.yandex/<registry-id>/web
+  repository: ""
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# imagePullSecrets можно не указывать — k8s nodes-SA имеет роль images.puller,
+# CRI containerd получает credentials через metadata-сервис YC автоматически.
+imagePullSecrets: []
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+  hosts:
+    - host: nexterm.ru
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: www.nexterm.ru
+      paths:
+        - path: /
+          pathType: Prefix
+
+  tls:
+    - hosts:
+        - nexterm.ru
+        - www.nexterm.ru
+      secretName: nexterm-web-tls
+
+# Pod disruption budget — обеспечиваем хотя бы 1 живой pod при обновлении.
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# HPA — на старте отключён, у лендинга нет нагрузки.
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80

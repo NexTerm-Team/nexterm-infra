@@ -1,0 +1,13 @@
+# Скопируйте в terraform.tfvars (gitignored) и заполните.
+
+cloud_id     = "b1g0umci2plkmko4jak2"
+folder_id    = "b1g9ht2s34tuseng2rl4"
+default_zone = "ru-central1-a"
+domain       = "nexterm.ru"
+github_owner = "abukatov"
+
+# При появлении новых компонентов — добавляйте сюда.
+# ci_repos = {
+#   web = { repo = "nexterm-web", allowed_ref = "main" }
+#   api = { repo = "nexterm-api", allowed_ref = "main" }
+# }
