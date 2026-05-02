@@ -56,9 +56,10 @@ module "dns" {
   folder_id = var.folder_id
   zone_name = var.domain
 
-  # apex_a_record заполнится после установки nginx-ingress и появления LB-IP.
-  # Первый apply — пусто, второй — IP из output'а ingress-controller'а.
-  apex_a_record = ""
+  # IP YC NLB, поднятого ingress-nginx-controller (Service type=LoadBalancer).
+  # Если NLB пересоздадут (uninstall ingress-nginx + повторный install) —
+  # IP может измениться, тогда обновить здесь и снова apply.
+  apex_a_record = "81.26.177.83"
 }
 
 # ============================================================================
