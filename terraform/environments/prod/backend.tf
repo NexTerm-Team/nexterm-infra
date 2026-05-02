@@ -1,8 +1,5 @@
 # Remote backend в YC Object Storage + YDB-locks.
-#
-# ВНИМАНИЕ: bucket и YDB endpoint создаются bootstrap'ом (см. ../../../bootstrap/).
-# После первого `terraform apply` в bootstrap скопируйте значения из его outputs
-# в этот файл (placeholder'ы ниже отмечены TODO).
+# Bucket и YDB endpoint созданы bootstrap'ом (см. ../../../bootstrap/).
 #
 # Для аутентификации:
 #   export AWS_ACCESS_KEY_ID="<bootstrap output: access_key>"
@@ -12,9 +9,8 @@
 terraform {
   backend "s3" {
     endpoints = {
-      s3 = "https://storage.yandexcloud.net"
-      # TODO: подставить из bootstrap output `ydb_full_endpoint`
-      dynamodb = "https://docapi.serverless.yandexcloud.net/ru-central1/<CLOUD_ID>/<YDB_NODE_ID>"
+      s3       = "https://storage.yandexcloud.net"
+      dynamodb = "https://docapi.serverless.yandexcloud.net/ru-central1/b1g0umci2plkmko4jak2/etnpsuqpl8h6quof9oc6"
     }
 
     bucket = "nexterm-tf-state"
