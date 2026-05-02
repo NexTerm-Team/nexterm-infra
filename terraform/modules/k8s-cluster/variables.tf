@@ -31,7 +31,7 @@ variable "nodes_security_group_id" {
 variable "k8s_version" {
   description = "Версия k8s в формате MAJOR.MINOR (последний patch выбирается release-channel)"
   type        = string
-  default     = "1.30"
+  default     = "1.33"
 }
 
 variable "cluster_ipv4_range" {
