@@ -20,6 +20,15 @@ resource "yandex_resourcemanager_folder_iam_member" "cluster_lb_admin" {
   member    = "serviceAccount:${yandex_iam_service_account.cluster.id}"
 }
 
+# load-balancer.admin — обязательно, иначе при создании Service type=LoadBalancer
+# yandex-cloud-controller-manager не может создать YC Network Load Balancer
+# (PermissionDenied: Operation is not permitted in the folder).
+resource "yandex_resourcemanager_folder_iam_member" "cluster_lb_creator" {
+  folder_id = var.folder_id
+  role      = "load-balancer.admin"
+  member    = "serviceAccount:${yandex_iam_service_account.cluster.id}"
+}
+
 # ============================================================================
 # Service account для node-группы (используется kubelet'ом, pull образов из CR)
 # ============================================================================
