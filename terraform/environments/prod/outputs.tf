@@ -32,6 +32,11 @@ output "wif_federation_id" {
 }
 
 output "wif_ci_service_accounts" {
-  description = "Service account ID для каждого CI-репо. Положить в GitHub Secrets как YC_SA_ID."
+  description = "Service account ID для каждого CI-репо. Используется при ручном debug; в самих workflow обмениваем через federated_credential_id."
   value       = module.wif.ci_service_accounts
+}
+
+output "wif_federated_credentials" {
+  description = "Federated credential ID на репо. Это значение идёт в GitHub Secret YC_FEDERATED_CREDENTIAL_ID — параметр для yc-actions/yc-iam-token-fed-credential."
+  value       = module.wif.federated_credentials
 }
