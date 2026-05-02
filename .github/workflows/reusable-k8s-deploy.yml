@@ -38,8 +38,6 @@ on:
         type: string
         default: 'https://github.com/abukatov'
     secrets:
-      YC_FEDERATED_CREDENTIAL_ID:
-        required: true # audience при exchange = id ресурса yandex_iam_workload_identity_federated_credential
       YC_CLUSTER_ID:
         required: true
 
@@ -71,14 +69,13 @@ jobs:
         id: yc
         env:
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
-          # YC token-exchange требует параметр audience = id ресурса
-          # yandex_iam_workload_identity_federated_credential.
-          YC_FED_CRED_ID: ${{ secrets.YC_FEDERATED_CREDENTIAL_ID }}
+          # audience = federation_id (по официальной YC документации).
+          YC_FEDERATION_ID: ${{ vars.YC_FEDERATION_ID }}
         run: |
           set -euo pipefail
 
-          if [ -z "${YC_FED_CRED_ID:-}" ]; then
-            echo "::error::YC_FEDERATED_CREDENTIAL_ID secret не задан."
+          if [ -z "${YC_FEDERATION_ID:-}" ]; then
+            echo "::error::YC_FEDERATION_ID variable не задан в caller-репо."
             exit 1
           fi
 
@@ -87,7 +84,7 @@ jobs:
             -w "\nHTTP_STATUS:%{http_code}\n" \
             --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
             --data-urlencode "requested_token_type=urn:ietf:params:oauth:token-type:access_token" \
-            --data-urlencode "audience=${YC_FED_CRED_ID}" \
+            --data-urlencode "audience=${YC_FEDERATION_ID}" \
             --data-urlencode "subject_token=${OIDC_TOKEN}" \
             --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
             https://auth.yandex.cloud/oauth/token)
