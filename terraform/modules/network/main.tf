@@ -116,3 +116,35 @@ resource "yandex_vpc_security_group" "k8s_nodes" {
     to_port        = 65535
   }
 }
+
+# ============================================================================
+# Cross-SG правила: master ↔ nodes
+#
+# Без них admission webhooks (cert-manager-webhook, ingress-nginx-admission и т.д.)
+# не работают: k8s API на master пытается дозвониться до webhook-pod на ноде,
+# но SG в YC по умолчанию не пропускает трафик между разными SG.
+#
+# Делаем через отдельные yandex_vpc_security_group_rule ресурсы, чтобы избежать
+# циклической зависимости (если бы ingress-блок одной SG ссылался на ID другой
+# SG, и наоборот — terraform не смог бы построить DAG).
+# ============================================================================
+
+resource "yandex_vpc_security_group_rule" "master_from_nodes_all" {
+  security_group_binding = yandex_vpc_security_group.k8s_master.id
+  direction              = "ingress"
+  description            = "Весь трафик из SG nodes (admission webhooks, kubelet)"
+  protocol               = "ANY"
+  from_port              = 0
+  to_port                = 65535
+  security_group_id      = yandex_vpc_security_group.k8s_nodes.id
+}
+
+resource "yandex_vpc_security_group_rule" "nodes_from_master_all" {
+  security_group_binding = yandex_vpc_security_group.k8s_nodes.id
+  direction              = "ingress"
+  description            = "Весь трафик из SG master (kube-apiserver → kubelet, webhook)"
+  protocol               = "ANY"
+  from_port              = 0
+  to_port                = 65535
+  security_group_id      = yandex_vpc_security_group.k8s_master.id
+}
