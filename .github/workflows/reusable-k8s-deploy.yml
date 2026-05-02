@@ -39,7 +39,7 @@ on:
         default: 'https://github.com/abukatov'
     secrets:
       YC_FEDERATED_CREDENTIAL_ID:
-        required: false # передаётся для совместимости с прежним API; для exchange сам по себе не нужен
+        required: true # audience при exchange = id ресурса yandex_iam_workload_identity_federated_credential
       YC_CLUSTER_ID:
         required: true
 
@@ -71,18 +71,39 @@ jobs:
         id: yc
         env:
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+          # YC token-exchange требует параметр audience = id ресурса
+          # yandex_iam_workload_identity_federated_credential.
+          YC_FED_CRED_ID: ${{ secrets.YC_FEDERATED_CREDENTIAL_ID }}
         run: |
           set -euo pipefail
-          IAM_TOKEN=$(curl -fsSL -X POST \
+
+          if [ -z "${YC_FED_CRED_ID:-}" ]; then
+            echo "::error::YC_FEDERATED_CREDENTIAL_ID secret не задан."
+            exit 1
+          fi
+
+          # Без -f, чтобы видеть error body при HTTP 4xx/5xx.
+          RESPONSE=$(curl -sS -X POST \
+            -w "\nHTTP_STATUS:%{http_code}\n" \
             --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
             --data-urlencode "requested_token_type=urn:ietf:params:oauth:token-type:access_token" \
+            --data-urlencode "audience=${YC_FED_CRED_ID}" \
             --data-urlencode "subject_token=${OIDC_TOKEN}" \
             --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
-            https://auth.yandex.cloud/oauth/token \
-            | jq -r '.access_token')
+            https://auth.yandex.cloud/oauth/token)
 
+          HTTP_STATUS=$(echo "$RESPONSE" | grep -oE 'HTTP_STATUS:[0-9]+' | cut -d: -f2)
+          BODY=$(echo "$RESPONSE" | sed 's/HTTP_STATUS:.*//')
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::YC token exchange failed (HTTP $HTTP_STATUS):"
+            echo "$BODY"
+            exit 1
+          fi
+
+          IAM_TOKEN=$(echo "$BODY" | jq -r '.access_token')
           if [ -z "$IAM_TOKEN" ] || [ "$IAM_TOKEN" = "null" ]; then
-            echo "Failed to obtain IAM token"
+            echo "::error::Empty access_token in response: $BODY"
             exit 1
           fi
 
